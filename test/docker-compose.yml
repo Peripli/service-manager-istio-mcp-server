@@ -46,5 +46,19 @@ services:
     expose:
       - "80"
 
+  istio-pilot:
+    build:
+      context: .
+      dockerfile: Dockerfile-istio-pilot 
+    volumes:
+      - ./istio-pilot.yaml:/etc/istio-config/istio-pilot.yaml
+    networks:
+      envoymesh:
+        aliases:
+          - istio-pilot
+    expose:
+      - "8000"
+      - "15010"
+
 networks:
   envoymesh: {}

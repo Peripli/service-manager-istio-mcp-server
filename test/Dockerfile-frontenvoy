@@ -1,5 +1,8 @@
-FROM envoyproxy/envoy:latest
+FROM istio/proxyv2:1.0.2
 
 RUN apt-get update && apt-get -q install -y \
     curl
-CMD /usr/local/bin/envoy -c /etc/front-envoy.yaml --service-cluster front-proxy
+ENTRYPOINT /usr/local/bin/envoy -c /etc/front-envoy.yaml \
+          --service-cluster x \
+          --max-obj-name-len 200 \
+          --v2-config-only
