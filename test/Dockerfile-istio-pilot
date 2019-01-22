@@ -1,4 +1,4 @@
-FROM istio/pilot:1.0.2
+FROM istio/pilot:1.1.0-snapshot.4
 
 RUN apt-get update && apt-get -q install -y \
     curl
@@ -9,7 +9,8 @@ ENTRYPOINT /usr/local/bin/pilot-discovery  discovery \
   --meshConfig=/dev/null \
   --plugins=health \
   --httpAddr=:8000 \
-  --grpcAddr=:15010
+  --grpcAddr=:15010 \
+  --mcpServerAddrs=mcp://host.docker.internal:18000
 
 
 
