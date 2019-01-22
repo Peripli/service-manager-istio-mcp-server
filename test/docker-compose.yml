@@ -7,6 +7,9 @@ services:
       dockerfile: Dockerfile-frontenvoy
     volumes:
       - ./front-envoy.yaml:/etc/front-envoy.yaml
+      - ./cf-service.crt:/var/vcap/jobs/envoy/config/certs/cf-service.crt
+      - ./cf-service.key:/var/vcap/jobs/envoy/config/certs/cf-service.key
+      - ./ca.crt:/var/vcap/jobs/envoy/config/certs/ca.crt
     networks:
       - envoymesh
     expose:

@@ -6,14 +6,15 @@ import (
 	. "github.com/onsi/gomega"
 	mcp "istio.io/api/mcp/v1alpha1"
 	networking "istio.io/api/networking/v1alpha3"
-	"istio.io/istio/pilot/pkg/model"
+	"istio.io/istio/galley/pkg/metadata"
+	"istio.io/istio/pkg/mcp/source"
 	"testing"
 )
 
 func TestNewConfigWatcher(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	configWatcher, err := NewConfigWatcher("192.0.0.1", 8000, "istio.cf.dev01.aws.istio.sapcloud.io", 9000)
+	configWatcher, err := NewConfigWatcherInMem("192.0.0.1", 8000, "istio.cf.dev01.aws.istio.sapcloud.io", 9000)
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(configWatcher).NotTo(BeNil())
 }
@@ -21,11 +22,11 @@ func TestNewConfigWatcher(t *testing.T) {
 func TestGetSnapshot(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	configWatcher, err := NewConfigWatcher("192.0.0.1", 8000, "istio.cf.dev01.aws.istio.sapcloud.io", 9000)
+	configWatcher, err := NewConfigWatcherInMem("192.0.0.1", 8000, "istio.cf.dev01.aws.istio.sapcloud.io", 9000)
 	snapshot, err := configWatcher.getSnapshot()
 	g.Expect(err).NotTo(HaveOccurred())
 	g.Expect(snapshot).NotTo(BeNil())
-	serviceEntries := snapshot.Resources(model.ServiceEntry.Collection)
+	serviceEntries := snapshot.Resources(metadata.ServiceEntry.TypeURL.String())
 	g.Expect(serviceEntries).To(HaveLen(1))
 	g.Expect(serviceEntries[0].Metadata.Name).To(Equal("pinger-service-entry"))
 	serviceEntry := &networking.ServiceEntry{}
@@ -33,7 +34,7 @@ func TestGetSnapshot(t *testing.T) {
 	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
 	g.Expect(serviceEntry.Hosts[0]).To(Equal("pinger.service-fabrik"))
 
-	virtualServices := snapshot.Resources(model.VirtualService.Collection)
+	virtualServices := snapshot.Resources(metadata.VirtualService.TypeURL.String())
 	g.Expect(virtualServices).To(HaveLen(1))
 	g.Expect(virtualServices[0].Metadata.Name).To(Equal("pinger-virtual-service"))
 	virtualService := &networking.VirtualService{}
@@ -43,7 +44,47 @@ func TestGetSnapshot(t *testing.T) {
 	g.Expect(virtualService.Tcp[0].Route[0].Destination.Host).To(Equal("pinger.service-fabrik"))
 	g.Expect(virtualService.Tcp[0].Route[0].Destination.Port.GetNumber()).To(Equal(uint32(8000)))
 
-	gateways := snapshot.Resources(model.Gateway.Collection)
+	gateways := snapshot.Resources(metadata.Gateway.TypeURL.String())
+	g.Expect(gateways).To(HaveLen(1))
+	g.Expect(gateways[0].Metadata.Name).To(Equal("pinger-gateway"))
+	gateway := &networking.Gateway{}
+	unWrapResource(gateways[0], gateway)
+	g.Expect(gateway.Servers[0].Hosts[0]).To(Equal("pinger.istio.cf.dev01.aws.istio.sapcloud.io"))
+	g.Expect(gateway.Servers[0].Port.Number).To(Equal(uint32(9000)))
+
+}
+
+func TestCollections(t *testing.T) {
+	g := NewGomegaWithT(t)
+	g.Expect(Collections()).To(ContainElement(source.CollectionOptions{Name: "type.googleapis.com/istio.mixer.v1.config.client.QuotaSpecBinding"}))
+}
+
+func TestReadSnapshotFromFile(t *testing.T) {
+	g := NewGomegaWithT(t)
+	filename := "../../test/istio-pilot.yaml"
+	configWatcher, err := NewConfigWatcher(filename)
+	snapshot, err := configWatcher.readSnapshotFromFile()
+	g.Expect(err).NotTo(HaveOccurred())
+
+	serviceEntries := snapshot.Resources(metadata.ServiceEntry.TypeURL.String())
+	g.Expect(serviceEntries).To(HaveLen(1))
+	g.Expect(serviceEntries[0].Metadata.Name).To(Equal("pinger"))
+	serviceEntry := &networking.ServiceEntry{}
+	unWrapResource(serviceEntries[0], serviceEntry)
+	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
+	g.Expect(serviceEntry.Hosts[0]).To(Equal("istio-pinger.istio"))
+
+	virtualServices := snapshot.Resources(metadata.VirtualService.TypeURL.String())
+	g.Expect(virtualServices).To(HaveLen(1))
+	g.Expect(virtualServices[0].Metadata.Name).To(Equal("pinger"))
+	virtualService := &networking.VirtualService{}
+	unWrapResource(virtualServices[0], virtualService)
+	g.Expect(virtualService.Hosts).To(HaveLen(1))
+	g.Expect(virtualService.Hosts[0]).To(Equal("pinger.istio.cf.dev01.aws.istio.sapcloud.io"))
+	g.Expect(virtualService.Tcp[0].Route[0].Destination.Host).To(Equal("istio-pinger.istio"))
+	g.Expect(virtualService.Tcp[0].Route[0].Destination.Port.GetNumber()).To(Equal(uint32(8081)))
+
+	gateways := snapshot.Resources(metadata.Gateway.TypeURL.String())
 	g.Expect(gateways).To(HaveLen(1))
 	g.Expect(gateways[0].Metadata.Name).To(Equal("pinger-gateway"))
 	gateway := &networking.Gateway{}
