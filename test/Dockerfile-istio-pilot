@@ -4,7 +4,6 @@ RUN apt-get update && apt-get -q install -y \
     curl
 
 ENTRYPOINT /usr/local/bin/pilot-discovery  discovery \
-  --configDir=/etc/istio-config \
   --registries=Mock \
   --meshConfig=/dev/null \
   --plugins=health \

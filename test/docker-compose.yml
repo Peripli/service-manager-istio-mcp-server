@@ -53,8 +53,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-istio-pilot 
-    volumes:
-      - ./istio-pilot.yaml:/etc/istio-config/istio-pilot.yaml
     networks:
       envoymesh:
         aliases:
