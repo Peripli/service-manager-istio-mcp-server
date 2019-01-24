@@ -55,7 +55,7 @@ services:
       dockerfile: Dockerfile-istio-pilot 
     volumes:
     - ./mesh-config.yaml:/etc/mesh-config.yaml
-    - ./istio-test.yaml:/etc/istio-config/istio-test.yaml
+    - ./config/sub/istio-test.yaml:/etc/istio-config/istio-test.yaml
     networks:
       envoymesh:
         aliases:

@@ -61,7 +61,7 @@ func TestCollections(t *testing.T) {
 
 func TestReadSnapshotFromFile(t *testing.T) {
 	g := NewGomegaWithT(t)
-	filename := "../../test/istio-pilot.yaml"
+	filename := "../../test/config/istio-pinger.yaml"
 	configWatcher, err := NewConfigWatcher(filename)
 	snapshot, err := configWatcher.readSnapshotFromFile()
 	g.Expect(err).NotTo(HaveOccurred())
@@ -91,6 +91,40 @@ func TestReadSnapshotFromFile(t *testing.T) {
 	unWrapResource(gateways[0], gateway)
 	g.Expect(gateway.Servers[0].Hosts[0]).To(Equal("pinger.istio.cf.dev01.aws.istio.sapcloud.io"))
 	g.Expect(gateway.Servers[0].Port.Number).To(Equal(uint32(9000)))
+
+}
+
+func TestReadSnapshotFromInvalidFile(t *testing.T) {
+	g := NewGomegaWithT(t)
+	filename := "../../test/config/front-envoy.yaml"
+	_, err := NewConfigWatcher(filename)
+	g.Expect(err).To(HaveOccurred())
+
+}
+
+func TestReadSnapshotFromDirectory(t *testing.T) {
+	g := NewGomegaWithT(t)
+	snapshot, err := readSnapshotFromDirectory("../../test/config")
+	g.Expect(err).NotTo(HaveOccurred())
+	serviceEntries := snapshot.Resources(metadata.ServiceEntry.TypeURL.String())
+	g.Expect(serviceEntries).To(HaveLen(2))
+	g.Expect(serviceEntries[0].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
+	g.Expect(serviceEntries[1].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
+	serviceEntry := &networking.ServiceEntry{}
+	unWrapResource(serviceEntries[0], serviceEntry)
+	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
+	g.Expect(serviceEntry.Hosts[0]).To(Or(Equal("istio-pinger.istio"), Equal("istio-test.istio")))
+	unWrapResource(serviceEntries[1], serviceEntry)
+	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
+	g.Expect(serviceEntry.Hosts[0]).To(Or(Equal("istio-pinger.istio"), Equal("istio-test.istio")))
+
+	virtualServices := snapshot.Resources(metadata.VirtualService.TypeURL.String())
+	g.Expect(virtualServices).To(HaveLen(2))
+	g.Expect(virtualServices[0].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
+	g.Expect(virtualServices[1].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
+
+	gateways := snapshot.Resources(metadata.Gateway.TypeURL.String())
+	g.Expect(gateways).To(HaveLen(2))
 
 }
 

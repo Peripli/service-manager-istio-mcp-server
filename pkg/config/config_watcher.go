@@ -10,6 +10,8 @@ import (
 	"istio.io/istio/pilot/pkg/config/kube/crd"
 	"istio.io/istio/pkg/mcp/snapshot"
 	"istio.io/istio/pkg/mcp/source"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -134,24 +136,51 @@ func (r *resourceWrapper) wrap(message proto.Message, name string) *mcp.Resource
 }
 
 func (c *configWatcher) readSnapshotFromFile() (snapshot.Snapshot, error) {
-	content, err := ioutil.ReadFile(c.filename)
+	configs := make(map[string][]namedSpec)
+	err := readConfigMapFromFile(c.filename, configs)
 	if err != nil {
 		return nil, err
+	}
+	return configMapToSnapshot(configs)
+}
+
+func readSnapshotFromDirectory(dirname string) (snapshot.Snapshot, error) {
+	configs := make(map[string][]namedSpec)
+	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
+
+		if !info.IsDir() {
+			return readConfigMapFromFile(path, configs)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return configMapToSnapshot(configs)
+}
+
+func readConfigMapFromFile(fileName string, configs map[string][]namedSpec) error {
+	content, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return err
 	}
 
 	istioConfigs, _, err := crd.ParseInputs(string(content))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	snapshot := snapshot.NewInMemoryBuilder()
-	configs := make(map[string][]namedSpec)
 	for _, config := range istioConfigs {
 		configs[config.Type] = append(configs[config.Type], namedSpec{config.Name, config.Spec})
 	}
+	return nil
+}
 
+func configMapToSnapshot(configs map[string][]namedSpec) (snapshot.Snapshot, error) {
 	resourceWrapper := resourceWrapper{}
 
+	snapshot := snapshot.NewInMemoryBuilder()
 	for ctype, config := range configs {
 
 		switch ctype {
@@ -168,4 +197,5 @@ func (c *configWatcher) readSnapshotFromFile() (snapshot.Snapshot, error) {
 	}
 
 	return snapshot.Build(), nil
+
 }
