@@ -13,22 +13,12 @@ import (
 
 func main() {
 
-	//var pingerHost string
-	//var pingerPort int
-	//var systemDomain string
-	//var loadBalancerPort int
-	//
-	//flag.StringVar(&pingerHost, "pingerHost", "", "Pinger Host")
-	//flag.IntVar(&pingerPort, "pingerPort", 8000, "Pinger Port")
-	//flag.StringVar(&systemDomain, "systemdomain", "", "system domain of the landscape")
-	//flag.IntVar(&loadBalancerPort, "loadBalancerPort", 9000, "port of the load balancer of the landscape")
-
-	var filename string
-	flag.StringVar(&filename, "pingerConfigFile", "", "istio config file for pinger")
+	var configDir string
+	flag.StringVar(&configDir, "configDir", "", "istio config directory")
 
 	flag.Parse()
 
-	watcher, err := config.NewConfigWatcher(filename)
+	watcher, err := config.NewConfigWatcher(configDir)
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/types"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"istio.io/istio/pilot/pkg/config/kube/crd"
 	"istio.io/istio/pkg/mcp/snapshot"
 	"istio.io/istio/pkg/mcp/source"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,42 +19,54 @@ import (
 
 type configWatcher struct {
 	*snapshot.Cache
-	filename         string
-	pingerHost       string
-	pingerPort       int
-	systemDomain     string
-	loadBalancerPort int
+	watcher     *fsnotify.Watcher
+	doneChannel chan struct{}
 }
 
-func NewConfigWatcherInMem(pingerHost string, pingerPort int, systemDomain string, loadBalancerPort int) (*configWatcher, error) {
+func NewConfigWatcher(dirname string) (*configWatcher, error) {
 
+	var version = 1
 	result := &configWatcher{
-		Cache:            snapshot.New(snapshot.DefaultGroupIndex),
-		pingerHost:       pingerHost,
-		pingerPort:       pingerPort,
-		systemDomain:     systemDomain,
-		loadBalancerPort: loadBalancerPort,
+		Cache:       snapshot.New(snapshot.DefaultGroupIndex),
+		doneChannel: make(chan struct{}),
 	}
-	snapshot, err := result.getSnapshot()
+	snapshot, err := readSnapshotFromDirectory(dirname, version)
 	if err != nil {
 		return nil, err
 	}
 	result.SetSnapshot("default", snapshot)
+	result.watcher, err = fsnotify.NewWatcher()
+	result.watcher.Add(dirname)
+	go func() {
+		for {
+			select {
+			// watch for events
+			case event, more := <-result.watcher.Events:
+				if event.Op == fsnotify.Create || event.Op == fsnotify.Remove || event.Op == fsnotify.Write {
+					if !more {
+						break
+					}
+					version++
+					snapshot, err := readSnapshotFromDirectory(dirname, version)
+					if err != nil {
+						log.Printf("Can't read configuration from directory %s: %s", dirname, err.Error())
+					} else {
+						result.SetSnapshot("default", snapshot)
+					}
+				}
+				break
+			case <-result.doneChannel:
+				return
+			}
+		}
+	}()
+
 	return result, nil
 }
 
-func NewConfigWatcher(filename string) (*configWatcher, error) {
-
-	result := &configWatcher{
-		Cache:    snapshot.New(snapshot.DefaultGroupIndex),
-		filename: filename,
-	}
-	snapshot, err := result.readSnapshotFromFile()
-	if err != nil {
-		return nil, err
-	}
-	result.SetSnapshot("default", snapshot)
-	return result, nil
+func (c *configWatcher) Stop() {
+	close(c.doneChannel)
+	c.watcher.Close()
 }
 
 func Collections() []source.CollectionOptions {
@@ -72,23 +86,6 @@ func Collections() []source.CollectionOptions {
 		metadata.ServiceRoleBinding.TypeURL.String(),
 		metadata.RbacConfig.TypeURL.String(),
 	})
-}
-
-func (c *configWatcher) getSnapshot() (snapshot.Snapshot, error) {
-	serviceName := "pinger"
-	hostName := "pinger." + c.systemDomain
-	resourceWrapper := resourceWrapper{}
-	builder := snapshot.NewInMemoryBuilder()
-	builder.Set(metadata.ServiceEntry.TypeURL.String(), "1.0",
-		[]*mcp.Resource{resourceWrapper.wrap(createRawServiceEntryForExternalService(c.pingerHost, uint32(c.pingerPort), serviceName), serviceName+"-service-entry")},
-	)
-	builder.Set(metadata.VirtualService.TypeURL.String(), "1.0",
-		[]*mcp.Resource{resourceWrapper.wrap(createRawIngressVirtualServiceForExternalService(hostName, uint32(c.pingerPort), serviceName), serviceName+"-virtual-service")},
-	)
-	builder.Set(metadata.Gateway.TypeURL.String(), "1.0",
-		[]*mcp.Resource{resourceWrapper.wrap(createRawIngressGatewayForExternalService(hostName, uint32(c.loadBalancerPort), serviceName), serviceName+"-gateway")},
-	)
-	return builder.Build(), resourceWrapper.err
 }
 
 type resourceWrapper struct {
@@ -135,16 +132,7 @@ func (r *resourceWrapper) wrap(message proto.Message, name string) *mcp.Resource
 
 }
 
-func (c *configWatcher) readSnapshotFromFile() (snapshot.Snapshot, error) {
-	configs := make(map[string][]namedSpec)
-	err := readConfigMapFromFile(c.filename, configs)
-	if err != nil {
-		return nil, err
-	}
-	return configMapToSnapshot(configs)
-}
-
-func readSnapshotFromDirectory(dirname string) (snapshot.Snapshot, error) {
+func readSnapshotFromDirectory(dirname string, version int) (snapshot.Snapshot, error) {
 	configs := make(map[string][]namedSpec)
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
 
@@ -157,7 +145,7 @@ func readSnapshotFromDirectory(dirname string) (snapshot.Snapshot, error) {
 		return nil, err
 	}
 
-	return configMapToSnapshot(configs)
+	return configMapToSnapshot(configs, version)
 }
 
 func readConfigMapFromFile(fileName string, configs map[string][]namedSpec) error {
@@ -177,19 +165,20 @@ func readConfigMapFromFile(fileName string, configs map[string][]namedSpec) erro
 	return nil
 }
 
-func configMapToSnapshot(configs map[string][]namedSpec) (snapshot.Snapshot, error) {
+func configMapToSnapshot(configs map[string][]namedSpec, version int) (snapshot.Snapshot, error) {
 	resourceWrapper := resourceWrapper{}
 
+	stringVersion := fmt.Sprintf("%d.0", version)
 	snapshot := snapshot.NewInMemoryBuilder()
 	for ctype, config := range configs {
 
 		switch ctype {
 		case "gateway":
-			snapshot.Set(metadata.Gateway.TypeURL.String(), "1.0", resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.Gateway.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		case "virtual-service":
-			snapshot.Set(metadata.VirtualService.TypeURL.String(), "1.0", resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.VirtualService.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		case "service-entry":
-			snapshot.Set(metadata.ServiceEntry.TypeURL.String(), "1.0", resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.ServiceEntry.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		default:
 			return nil, fmt.Errorf("Proto format error: config type %s unknown", ctype)
 		}
