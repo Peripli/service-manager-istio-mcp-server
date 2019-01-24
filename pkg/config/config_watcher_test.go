@@ -97,7 +97,9 @@ func TestReadSnapshotFromDirectory(t *testing.T) {
 
 func TestConfigWatcher(t *testing.T) {
 	g := NewGomegaWithT(t)
-	dir, err := ioutil.TempDir("", "service-manager-istio-mcp-server")
+	cwd, err := os.Getwd()
+	g.Expect(err).NotTo(HaveOccurred())
+	dir, err := ioutil.TempDir(cwd, "service-manager-istio-mcp-server")
 	g.Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(dir)
 
