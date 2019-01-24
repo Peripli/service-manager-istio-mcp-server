@@ -9,7 +9,7 @@ ENTRYPOINT /usr/local/bin/pilot-discovery  discovery \
   --plugins=health \
   --httpAddr=:8000 \
   --grpcAddr=:15010 \
-  --mcpServerAddrs=mcp://host.docker.internal:18000
+  --meshConfig=/etc/mesh-config.yaml
 
 
 
