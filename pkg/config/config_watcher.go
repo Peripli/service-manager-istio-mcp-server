@@ -151,12 +151,12 @@ func readSnapshotFromDirectory(dirname string, version int) (snapshot.Snapshot, 
 func readConfigMapFromFile(fileName string, configs map[string][]namedSpec) error {
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read file %s: %v",fileName,err)
 	}
 
 	istioConfigs, _, err := crd.ParseInputs(string(content))
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse content of file %s: %v",fileName,err)
 	}
 
 	for _, config := range istioConfigs {
@@ -180,7 +180,7 @@ func configMapToSnapshot(configs map[string][]namedSpec, version int) (snapshot.
 		case "service-entry":
 			snapshot.Set(metadata.ServiceEntry.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		default:
-			return nil, fmt.Errorf("Proto format error: config type %s unknown", ctype)
+			return nil, fmt.Errorf("proto format error: config type %s unknown", ctype)
 		}
 
 	}
