@@ -1,8 +1,7 @@
-FROM istio/proxyv2:1.1.0-snapshot.4
+FROM istio/proxyv2:1.1.0-snapshot.6
 
 RUN apt-get update && apt-get -q install -y \
     curl
 ENTRYPOINT /usr/local/bin/envoy -c /etc/front-envoy.yaml \
           --service-cluster x \
-          --max-obj-name-len 200 \
-          --v2-config-only
+          --max-obj-name-len 200

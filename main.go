@@ -5,11 +5,12 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"github.com/Peripli/service-manager-istio-mpc-server/pkg/config"
+	"github.com/Peripli/service-manager-istio-mcp-server/pkg/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"io/ioutil"
 	"istio.io/api/mcp/v1alpha1"
+	"istio.io/istio/galley/pkg/metadata"
 	"istio.io/istio/pkg/mcp/monitoring"
 	"istio.io/istio/pkg/mcp/server"
 	"istio.io/istio/pkg/mcp/source"
@@ -30,10 +31,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	mcpServer := server.New(&source.Options{
+
+	options := &source.Options{
 		Watcher:            watcher,
 		Reporter:           monitoring.NewStatsContext("mcp"),
-		CollectionsOptions: config.Collections()}, &server.AllowAllChecker{})
+		CollectionOptions: source.CollectionOptionsFromSlice(metadata.Types.Collections())}
+
+	mcpServer := server.New(options,&server.AllowAllChecker{})
 
 	var grpcOptions []grpc.ServerOption
 	switch tlsMode {
@@ -50,6 +54,10 @@ func main() {
 	log.Println("Setting up tls config")
 
 	v1alpha1.RegisterAggregatedMeshConfigServiceServer(grpcServer, mcpServer)
+
+	serverOptions := &source.ServerOptions{AuthChecker: server.NewAllowAllChecker()}
+	mcpSource := source.NewServer(options, serverOptions)
+	v1alpha1.RegisterResourceSourceServer(grpcServer, mcpSource)
 
 	grpcListener, err := net.Listen("tcp", ":18000")
 	if err != nil {

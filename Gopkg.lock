@@ -34,7 +34,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:55783a792b7cbcb660890f9e2de4ecd1e5c14fab128e7c90b89cfeaeedfa1a44"
+  digest = "1:ec8586120632e0a67c55ef8f7b5bb046476e3f30bd999924b928772cc2b2c73b"
   name = "github.com/envoyproxy/go-control-plane"
   packages = [
     "envoy/api/v2",
@@ -46,11 +46,10 @@
     "envoy/api/v2/route",
     "envoy/config/grpc_credential/v2alpha",
     "envoy/type",
-    "pkg/util",
   ]
   pruneopts = "UT"
-  revision = "8a91fb26f4e6553d2e21fa76e07d33b93a4f66e7"
-  version = "v0.6.6"
+  revision = "eb553e72ac8724721a99ed85fcb116467c7a2bac"
+  version = "v0.6.7"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -93,6 +92,13 @@
   pruneopts = "UT"
   revision = "4cbf7e384e768b4e01799441fdf2a706a5635ae7"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:34cda9b255535dd76ef14c46a9ad6f440f20283b6cd353403717730d149815ae"
+  name = "github.com/gogo/status"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "d60b5acac426cb52f7e28124c6aaa862d9f339f5"
 
 [[projects]]
   branch = "master"
@@ -599,7 +605,7 @@
 
 [[projects]]
   branch = "release-1.1"
-  digest = "1:27af1894fdd44e5a4c6e9345e37f004ca323f4fd68c43315d89e2978eabfdc53"
+  digest = "1:ceb5aaf77431aff11549087961131edb18300716ae8ff08512f7075649687409"
   name = "istio.io/api"
   packages = [
     "authentication/v1alpha1",
@@ -612,11 +618,11 @@
     "rbac/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "6286ff0e63603c77cf7ec30510c39e5cebae65b2"
+  revision = "d817a1a3e29a0687920589181aec48b5a39daabb"
 
 [[projects]]
   branch = "release-1.1"
-  digest = "1:4f9618f582df704e5d42333b9d0b6b3a95a2d1d7fa158749d66f092a9a3c26b7"
+  digest = "1:4d4d0997c9b2231fb93fb88789fb104c49aa2326bb4f1affb86e0ab1383050cd"
   name = "istio.io/istio"
   packages = [
     "galley/pkg/metadata",
@@ -630,6 +636,7 @@
     "pkg/kube",
     "pkg/log",
     "pkg/mcp/env",
+    "pkg/mcp/internal",
     "pkg/mcp/monitoring",
     "pkg/mcp/server",
     "pkg/mcp/snapshot",
@@ -639,7 +646,7 @@
     "security/pkg/pki/util",
   ]
   pruneopts = "UT"
-  revision = "41a1d909d3e9257ce22d2dc99235a604fe8d3b95"
+  revision = "58186e1dc3392de842bc2b2c788f993878e0f123"
 
 [[projects]]
   branch = "release-1.11"

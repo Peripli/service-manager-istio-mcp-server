@@ -10,7 +10,6 @@ import (
 	"istio.io/istio/galley/pkg/metadata"
 	"istio.io/istio/pilot/pkg/config/kube/crd"
 	"istio.io/istio/pkg/mcp/snapshot"
-	"istio.io/istio/pkg/mcp/source"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,7 +26,9 @@ func NewConfigWatcher(dirname string) (*configWatcher, error) {
 
 	var version = 1
 	result := &configWatcher{
-		Cache:       snapshot.New(snapshot.DefaultGroupIndex),
+		Cache:       snapshot.New(func(collection string, node *mcp.SinkNode) string {
+			return "default"
+		}),
 		doneChannel: make(chan struct{}),
 	}
 	snapshot, err := readSnapshotFromDirectory(dirname, version)
@@ -69,24 +70,6 @@ func (c *configWatcher) Stop() {
 	c.watcher.Close()
 }
 
-func Collections() []source.CollectionOptions {
-	return source.CollectionOptionsFromSlice([]string{
-		metadata.Gateway.TypeURL.String(),
-		metadata.VirtualService.TypeURL.String(),
-		metadata.DestinationRule.TypeURL.String(),
-		metadata.ServiceEntry.TypeURL.String(),
-		metadata.EnvoyFilter.TypeURL.String(),
-		metadata.HTTPAPISpec.TypeURL.String(),
-		metadata.HTTPAPISpecBinding.TypeURL.String(),
-		metadata.QuotaSpec.TypeURL.String(),
-		metadata.QuotaSpecBinding.TypeURL.String(),
-		metadata.Policy.TypeURL.String(),
-		metadata.MeshPolicy.TypeURL.String(),
-		metadata.ServiceRole.TypeURL.String(),
-		metadata.ServiceRoleBinding.TypeURL.String(),
-		metadata.RbacConfig.TypeURL.String(),
-	})
-}
 
 type resourceWrapper struct {
 	createTime *types.Timestamp
@@ -135,7 +118,9 @@ func (r *resourceWrapper) wrap(message proto.Message, name string) *mcp.Resource
 func readSnapshotFromDirectory(dirname string, version int) (snapshot.Snapshot, error) {
 	configs := make(map[string][]namedSpec)
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
-
+		if err != nil {
+			return err
+		}
 		if !info.IsDir() {
 			return readConfigMapFromFile(path, configs)
 		}
@@ -174,11 +159,11 @@ func configMapToSnapshot(configs map[string][]namedSpec, version int) (snapshot.
 
 		switch ctype {
 		case "gateway":
-			snapshot.Set(metadata.Gateway.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.IstioNetworkingV1alpha3Gateways.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		case "virtual-service":
-			snapshot.Set(metadata.VirtualService.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.IstioNetworkingV1alpha3Virtualservices.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		case "service-entry":
-			snapshot.Set(metadata.ServiceEntry.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
+			snapshot.Set(metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String(), stringVersion, resourceWrapper.wrapMultiple(config))
 		default:
 			return nil, fmt.Errorf("proto format error: config type %s unknown", ctype)
 		}
