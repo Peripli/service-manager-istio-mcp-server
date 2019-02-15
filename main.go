@@ -20,7 +20,9 @@ import (
 func main() {
 
 	var configDir string
+	var tlsMode string
 	flag.StringVar(&configDir, "configDir", "", "istio config directory")
+	flag.StringVar(&tlsMode, "tlsMode", "MUTUAL", "tls mode. Possible values: NONE, MUTUAL.")
 
 	flag.Parse()
 
@@ -33,30 +35,14 @@ func main() {
 		Reporter:           monitoring.NewStatsContext("mcp"),
 		CollectionsOptions: config.Collections()}, &server.AllowAllChecker{})
 
-	serverCert, err := tls.LoadX509KeyPair("config/certs/mcp.crt", "config/certs/mcp.key")
-	if err != nil {
-		panic(err)
-	}
-
-	certPool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile("config/certs/ca.crt")
-	if err != nil {
-		panic(fmt.Errorf("could not read ca-file: %s", err))
-	}
-
-	ok := certPool.AppendCertsFromPEM(ca)
-	if !ok {
-		panic("Could not append ca cert to cert pool.")
-	}
-
-	tlsConfig := &tls.Config{
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    certPool,
-		Certificates: []tls.Certificate{serverCert},
-	}
-
 	var grpcOptions []grpc.ServerOption
-	grpcOptions = append(grpcOptions, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	switch tlsMode {
+	case "MUTUAL":
+		grpcOptions = append(grpcOptions, grpc.Creds(credentials.NewTLS(tlsConfig())))
+	case "NONE":
+	default:
+		log.Panic(fmt.Sprintf("Invalid TLS mode %s", tlsMode))
+	}
 	grpcOptions = append(grpcOptions, grpc.MaxConcurrentStreams(1024))
 	grpcOptions = append(grpcOptions, grpc.MaxRecvMsgSize(1024*1024))
 	grpcServer := grpc.NewServer(grpcOptions...)
@@ -75,4 +61,25 @@ func main() {
 		panic(err)
 	}
 
+}
+
+func tlsConfig() *tls.Config {
+	serverCert, err := tls.LoadX509KeyPair("config/certs/mcp.crt", "config/certs/mcp.key")
+	if err != nil {
+		panic(err)
+	}
+	certPool := x509.NewCertPool()
+	ca, err := ioutil.ReadFile("config/certs/ca.crt")
+	if err != nil {
+		panic(fmt.Errorf("could not read ca-file: %s", err))
+	}
+	ok := certPool.AppendCertsFromPEM(ca)
+	if !ok {
+		panic("Could not append ca cert to cert pool.")
+	}
+	return &tls.Config{
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
+		Certificates: []tls.Certificate{serverCert},
+	}
 }
