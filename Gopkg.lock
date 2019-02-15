@@ -10,14 +10,6 @@
   version = "v0.34.0"
 
 [[projects]]
-  digest = "1:8cc7f557e97d0cd41b7d49d1996b680eb62b25aa8adeeded83921588079163ae"
-  name = "github.com/Peripli/service-manager-istio-mpc-server"
-  packages = ["pkg/config"]
-  pruneopts = "UT"
-  revision = "a2f3213c192cdbe7b612466635bce8e5661cb5f7"
-  version = "0.2.2"
-
-[[projects]]
   branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
@@ -886,7 +878,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/Peripli/service-manager-istio-mpc-server/pkg/config",
     "github.com/fsnotify/fsnotify",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/types",
