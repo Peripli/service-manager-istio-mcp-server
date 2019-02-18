@@ -30,7 +30,7 @@ func TestReadSnapshotFromFile(t *testing.T) {
 	snapshot, err := readSnapshotFromFile("../../test/config/istio-pinger.yaml")
 	g.Expect(err).NotTo(HaveOccurred())
 
-	serviceEntries := snapshot.Resources(metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String())
+	serviceEntries := snapshot.Resources(metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String())
 	g.Expect(serviceEntries).To(HaveLen(1))
 	g.Expect(serviceEntries[0].Metadata.Name).To(Equal("pinger"))
 	serviceEntry := &networking.ServiceEntry{}
@@ -38,7 +38,7 @@ func TestReadSnapshotFromFile(t *testing.T) {
 	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
 	g.Expect(serviceEntry.Hosts[0]).To(Equal("istio-pinger.istio"))
 
-	virtualServices := snapshot.Resources(metadata.IstioNetworkingV1alpha3Virtualservices.TypeURL.String())
+	virtualServices := snapshot.Resources(metadata.IstioNetworkingV1alpha3Virtualservices.Collection.String())
 	g.Expect(virtualServices).To(HaveLen(1))
 	g.Expect(virtualServices[0].Metadata.Name).To(Equal("pinger"))
 	virtualService := &networking.VirtualService{}
@@ -48,7 +48,7 @@ func TestReadSnapshotFromFile(t *testing.T) {
 	g.Expect(virtualService.Tcp[0].Route[0].Destination.Host).To(Equal("istio-pinger.istio"))
 	g.Expect(virtualService.Tcp[0].Route[0].Destination.Port.GetNumber()).To(Equal(uint32(8081)))
 
-	gateways := snapshot.Resources(metadata.IstioNetworkingV1alpha3Gateways.TypeURL.String())
+	gateways := snapshot.Resources(metadata.IstioNetworkingV1alpha3Gateways.Collection.String())
 	g.Expect(gateways).To(HaveLen(1))
 	g.Expect(gateways[0].Metadata.Name).To(Equal("pinger-gateway"))
 	gateway := &networking.Gateway{}
@@ -69,7 +69,7 @@ func TestReadSnapshotFromDirectory(t *testing.T) {
 	g := NewGomegaWithT(t)
 	snapshot, err := readSnapshotFromDirectory("../../test/config", 1)
 	g.Expect(err).NotTo(HaveOccurred())
-	serviceEntries := snapshot.Resources(metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String())
+	serviceEntries := snapshot.Resources(metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String())
 	g.Expect(serviceEntries).To(HaveLen(2))
 	g.Expect(serviceEntries[0].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
 	g.Expect(serviceEntries[1].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
@@ -81,12 +81,12 @@ func TestReadSnapshotFromDirectory(t *testing.T) {
 	g.Expect(serviceEntry.Hosts).To(HaveLen(1))
 	g.Expect(serviceEntry.Hosts[0]).To(Or(Equal("istio-pinger.istio"), Equal("istio-test.istio")))
 
-	virtualServices := snapshot.Resources(metadata.IstioNetworkingV1alpha3Virtualservices.TypeURL.String())
+	virtualServices := snapshot.Resources(metadata.IstioNetworkingV1alpha3Virtualservices.Collection.String())
 	g.Expect(virtualServices).To(HaveLen(2))
 	g.Expect(virtualServices[0].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
 	g.Expect(virtualServices[1].Metadata.Name).To(Or(Equal("pinger"), Equal("test")))
 
-	gateways := snapshot.Resources(metadata.IstioNetworkingV1alpha3Gateways.TypeURL.String())
+	gateways := snapshot.Resources(metadata.IstioNetworkingV1alpha3Gateways.Collection.String())
 	g.Expect(gateways).To(HaveLen(2))
 
 }
@@ -110,7 +110,7 @@ func TestConfigWatcher(t *testing.T) {
 	var response *source.WatchResponse
 	// add one file
 	{
-		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String()}, callback)
+		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String()}, callback)
 
 		err = os.Link("../../test/config/istio-pinger.yaml", path.Join(dir, "istio-pinger.yaml"))
 		g.Expect(err).NotTo(HaveOccurred())
@@ -127,7 +127,7 @@ func TestConfigWatcher(t *testing.T) {
 	}
 	// add second file
 	{
-		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
+		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
 			channel <- response
 		})
 
@@ -141,7 +141,7 @@ func TestConfigWatcher(t *testing.T) {
 	}
 	// remove first file
 	{
-		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
+		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
 			channel <- response
 		})
 		err = os.Remove(path.Join(dir, "istio-pinger.yaml"))
@@ -158,7 +158,7 @@ func TestConfigWatcher(t *testing.T) {
 	}
 	// remove second file
 	{
-		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.TypeURL.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
+		configWatcher.Watch(&source.Request{Collection: metadata.IstioNetworkingV1alpha3Serviceentries.Collection.String(), VersionInfo: response.Version}, func(response *source.WatchResponse) {
 			channel <- response
 		})
 		err = os.Remove(path.Join(dir, "istio-test.yaml"))
