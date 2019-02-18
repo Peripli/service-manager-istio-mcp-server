@@ -1,3 +1,2 @@
 config_sources:
 - address: host.docker.internal:18000
-- address: fs:///etc/istio-config/

@@ -5,7 +5,6 @@ RUN apt-get update && apt-get -q install -y \
 
 ENTRYPOINT /usr/local/bin/pilot-discovery  discovery \
   --registries=Mock \
-  --meshConfig=/dev/null \
   --plugins=health \
   --httpAddr=:8000 \
   --grpcAddr=:15010 \
