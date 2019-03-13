@@ -10,6 +10,7 @@ import (
 	"istio.io/istio/galley/pkg/metadata"
 	"istio.io/istio/pilot/pkg/config/kube/crd"
 	"istio.io/istio/pkg/mcp/snapshot"
+	"istio.io/istio/pkg/mcp/source"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,11 +23,19 @@ type configWatcher struct {
 	doneChannel chan struct{}
 }
 
-func NewConfigWatcher(dirname string) (*configWatcher, error) {
+//Ensure that configWatcher implements source.Watcher
+var _ source.Watcher = &configWatcher{}
 
+//NewConfigWatcher creates a configWatcher
+func NewConfigWatcher(dirname string) (source.Watcher, error) {
+	return newConfigWatcher(dirname)
+}
+
+//Use an unexported constructor to call stop() in tests
+func newConfigWatcher(dirname string) (*configWatcher, error) {
 	var version = 1
 	result := &configWatcher{
-		Cache:       snapshot.New(func(collection string, node *mcp.SinkNode) string {
+		Cache: snapshot.New(func(collection string, node *mcp.SinkNode) string {
 			return "default"
 		}),
 		doneChannel: make(chan struct{}),
@@ -69,7 +78,6 @@ func (c *configWatcher) Stop() {
 	close(c.doneChannel)
 	c.watcher.Close()
 }
-
 
 type resourceWrapper struct {
 	createTime *types.Timestamp
@@ -136,12 +144,12 @@ func readSnapshotFromDirectory(dirname string, version int) (snapshot.Snapshot, 
 func readConfigMapFromFile(fileName string, configs map[string][]namedSpec) error {
 	content, err := ioutil.ReadFile(fileName)
 	if err != nil {
-		return fmt.Errorf("unable to read file %s: %v",fileName,err)
+		return fmt.Errorf("unable to read file %s: %v", fileName, err)
 	}
 
 	istioConfigs, _, err := crd.ParseInputs(string(content))
 	if err != nil {
-		return fmt.Errorf("unable to parse content of file %s: %v",fileName,err)
+		return fmt.Errorf("unable to parse content of file %s: %v", fileName, err)
 	}
 
 	for _, config := range istioConfigs {

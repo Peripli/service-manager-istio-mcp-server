@@ -15,7 +15,6 @@ import (
 	"testing"
 )
 
-
 func readSnapshotFromFile(filename string) (snapshot.Snapshot, error) {
 	configs := make(map[string][]namedSpec)
 	err := readConfigMapFromFile(filename, configs)
@@ -99,7 +98,7 @@ func TestConfigWatcher(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(dir)
 
-	configWatcher, err := NewConfigWatcher(dir)
+	configWatcher, err := newConfigWatcher(dir)
 	g.Expect(err).NotTo(HaveOccurred())
 	defer configWatcher.Stop()
 
