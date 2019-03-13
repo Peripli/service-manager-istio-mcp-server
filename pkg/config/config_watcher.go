@@ -27,7 +27,12 @@ type configWatcher struct {
 var _ source.Watcher = &configWatcher{}
 
 //NewConfigWatcher creates a configWatcher
-func NewConfigWatcher(dirname string) (*configWatcher, error) {
+func NewConfigWatcher(dirname string) (source.Watcher, error) {
+	return newConfigWatcher(dirname)
+}
+
+//Use an unexported constructor to call stop() in tests
+func newConfigWatcher(dirname string) (*configWatcher, error) {
 	var version = 1
 	result := &configWatcher{
 		Cache: snapshot.New(func(collection string, node *mcp.SinkNode) string {
