@@ -98,7 +98,7 @@ func TestConfigWatcher(t *testing.T) {
 	g.Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(dir)
 
-	configWatcher, err := newConfigWatcher(dir)
+	configWatcher, err := NewConfigWatcher(dir)
 	g.Expect(err).NotTo(HaveOccurred())
 	defer configWatcher.Stop()
 
